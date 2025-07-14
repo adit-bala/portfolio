@@ -39,3 +39,21 @@ div#__next > div {
 ::-webkit-scrollbar-thumb:hover {
   background: #ff8037;
 }
+
+/* Custom scrollbar for modal and blog popups */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #D79921;
+  border-radius: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #3C3836;
+  border-radius: 5px;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #D79921 #3C3836;
+}
