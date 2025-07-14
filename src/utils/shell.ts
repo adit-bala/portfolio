@@ -10,6 +10,15 @@ export const shell = async (
   const args = command.split(' ');
   args[0] = args[0].toLowerCase();
 
+  // Intercept !<query> for AI assistant
+  if (command.startsWith('!')) {
+    const { ai } = await import('./bin');
+    const output = await ai([command.slice(1).trim()]);
+    setHistory(output);
+    setCommand('');
+    return;
+  }
+
   if (args[0] === 'clear') {
     clearHistory();
   } else if (command === '') {

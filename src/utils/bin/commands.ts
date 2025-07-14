@@ -1,6 +1,7 @@
 // List of commands that do not require API calls
 import { getDatabase, runQuery } from '../sqlite';
 import * as bin from './index';
+import axios from 'axios';
 
 // Help
 export const help = async (_args: string[]): Promise<string> => {
@@ -89,3 +90,26 @@ Type 'clear' to clear the terminal.
 `;
 };
 (banner as any).description = 'Display the welcome banner';
+
+// AI Assistant command: !<query>
+export const ai = async (args: string[]): Promise<string> => {
+  const question = args.join(' ').trim();
+  if (!question) return 'Usage: !<your question>';
+  try {
+    const response = await axios.post(
+      'https://knowledge-base.aditbala.com/ask',
+      { question },
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    // Try to extract a useful answer
+    if (response.data?.answer) {
+      return response.data.answer;
+    }
+    return JSON.stringify(response.data, null, 2);
+  } catch (err: any) {
+    return `Error querying knowledge base: ${
+      err?.response?.data?.error || err.message
+    }`;
+  }
+};
+(ai as any).description = 'Ask the AI assistant (!<question>)';
