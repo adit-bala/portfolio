@@ -18,6 +18,21 @@ export const Input = ({
 }) => {
   const [processingAi, setProcessingAi] = React.useState(false);
 
+  // Enhanced auto-scroll function
+  const autoScrollToBottom = React.useCallback(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, []);
+
+  // Auto-scroll when history changes
+  React.useEffect(() => {
+    autoScrollToBottom();
+  }, [history, autoScrollToBottom]);
+
   const onSubmit = async (event: React.KeyboardEvent<HTMLInputElement>) => {
     const commands: [string] = history
       .map(({ command }) => command)
@@ -60,7 +75,7 @@ export const Input = ({
       if (isAiQuery) {
         setProcessingAi(false);
       }
-      containerRef.current.scrollTo(0, containerRef.current.scrollHeight);
+      // Auto-scroll will be handled by the useEffect above
     }
 
     if (event.key === 'ArrowUp') {

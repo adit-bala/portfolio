@@ -19,8 +19,10 @@ div#__next,
 div#__next > div {
   height: 100%;
   overflow: auto;
+  scroll-behavior: smooth;
 }
 
+/* Enhanced scrollbar styling */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -38,6 +40,17 @@ div#__next > div {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #ff8037;
+}
+
+/* Ensure smooth scrolling for all scrollable elements */
+.overflow-y-auto,
+.overflow-auto {
+  scroll-behavior: smooth;
+}
+
+/* Auto-scroll container styles */
+.scroll-smooth {
+  scroll-behavior: smooth;
 }
 
 /* Custom scrollbar for modal and blog popups */

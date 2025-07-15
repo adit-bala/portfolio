@@ -29,12 +29,17 @@ const IndexPage: React.FC<IndexPageProps> = ({ inputRef }) => {
     init();
   }, [init]);
 
+  // Enhanced focus and scroll behavior
   React.useEffect(() => {
     if (inputRef.current) {
-      inputRef.current.scrollIntoView();
+      // Ensure input is visible and focused
+      inputRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
       inputRef.current.focus({ preventScroll: true });
     }
-  }, [history]);
+  }, [history, inputRef]);
 
   return (
     <>
@@ -43,7 +48,10 @@ const IndexPage: React.FC<IndexPageProps> = ({ inputRef }) => {
       </Head>
 
       <div className="p-2 sm:p-4 md:p-8 overflow-hidden h-full border-2 rounded border-light-yellow dark:border-dark-yellow">
-        <div ref={containerRef} className="overflow-y-auto h-full">
+        <div
+          ref={containerRef}
+          className="overflow-y-auto h-full scroll-smooth"
+        >
           <History history={history} />
 
           <Input
