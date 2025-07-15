@@ -17,35 +17,49 @@ export const help = async (_args: string[]): Promise<string> => {
 };
 (help as any).description = 'Show available commands';
 
-// About, Contact, CV from DB
+// About, Contact, CV from DB - now trigger modals
 export const about = async () => {
-  const rows = await runQuery(
-    "SELECT markdown FROM notion WHERE LOWER(title) = 'about' LIMIT 1",
-  );
-  return rows[0]?.markdown || 'No about article found.';
+  // Trigger modal event
+  const event = new CustomEvent('openModal', {
+    detail: { type: 'about' }
+  });
+  window.dispatchEvent(event);
+  return 'Opening about page...';
 };
 (about as any).description = 'See more about me!';
 
 export const contact = async () => {
-  const rows = await runQuery(
-    "SELECT markdown FROM notion WHERE LOWER(title) = 'contact' LIMIT 1",
-  );
-  return rows[0]?.markdown || 'No contact article found.';
+  // Trigger modal event
+  const event = new CustomEvent('openModal', {
+    detail: { type: 'contact' }
+  });
+  window.dispatchEvent(event);
+  return 'Opening contact page...';
 };
 (contact as any).description = 'Get in touch with me!';
 
 export const cv = async () => {
-  const rows = await runQuery(
-    "SELECT markdown FROM notion WHERE LOWER(title) = 'cv' LIMIT 1",
-  );
-  return rows[0]?.markdown || 'No CV article found.';
+  // Trigger modal event
+  const event = new CustomEvent('openModal', {
+    detail: { type: 'cv' }
+  });
+  window.dispatchEvent(event);
+  return 'Opening CV page...';
 };
 (cv as any).description = 'See more about my work!';
 
 // Blog command
 export const blog = async () => {
+  const prettyDate = (date: string) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
   const rows = await runQuery(
-    `SELECT id, title, description, tags, created_at FROM notion WHERE status = 'published' ORDER BY created_at DESC`,
+    `SELECT id, title, description, tags, created_at FROM notion WHERE status = 'published' AND LOWER(title) != 'about' AND LOWER(title) != 'contact' AND LOWER(title) != 'cv' ORDER BY created_at DESC LIMIT 10`,
   );
   if (!rows.length) return 'No blog articles found.';
   // Each row: {id, title, description, tags, created_at}
@@ -112,4 +126,5 @@ export const ai = async (args: string[]): Promise<string> => {
     }`;
   }
 };
-(ai as any).description = 'Ask the AI assistant (!<question>)';
+(ai as any).description =
+  "Prefix your query with '!' to ask my AI assistant about anything I've written about!";

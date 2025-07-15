@@ -7,15 +7,26 @@ const Modal = ({ open, onClose, children }) => {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-light-background dark:bg-dark-background text-light-foreground dark:text-dark-foreground p-6 rounded shadow-lg max-w-2xl w-full relative">
+      <div
+        className="bg-light-background dark:bg-dark-background text-light-foreground dark:text-dark-foreground p-6 rounded shadow-lg border-4 border-blue-500 relative"
+        style={{
+          width: '700px',
+          height: '500px',
+          maxWidth: '95vw',
+          maxHeight: '95vh',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <button
-          className="absolute top-2 right-2 text-lg font-bold"
+          className="absolute top-3 right-3 text-3xl font-extrabold text-blue-700 hover:text-blue-400 focus:outline-none bg-white/80 rounded-full p-1"
           onClick={onClose}
           aria-label="Close"
+          style={{ zIndex: 20 }}
         >
           ×
         </button>
-        {children}
+        <div style={{ overflowY: 'auto', flex: 1, marginTop: '2.5rem' }}>{children}</div>
       </div>
     </div>
   );
@@ -48,8 +59,28 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
         }
       }
     };
+
+    // Handle modal events from commands
+    const modalHandler = async (e: CustomEvent) => {
+      const { type } = e.detail;
+      const { getDatabase } = await import('../../utils/sqlite');
+      const db = await getDatabase();
+      const rows = db.exec(
+        `SELECT markdown FROM notion WHERE LOWER(title) = '${type}' LIMIT 1`,
+      );
+      if (rows.length && rows[0].values.length) {
+        const [markdown] = rows[0].values[0];
+        setModal({ open: true, content: markdown });
+      }
+    };
+
     document.addEventListener('click', handler);
-    return () => document.removeEventListener('click', handler);
+    window.addEventListener('openModal', modalHandler as EventListener);
+
+    return () => {
+      document.removeEventListener('click', handler);
+      window.removeEventListener('openModal', modalHandler as EventListener);
+    };
   }, []);
 
   return (
@@ -75,7 +106,9 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
         open={modal.open}
         onClose={() => setModal({ open: false, content: '' })}
       >
-        <ReactMarkdown>{modal.content}</ReactMarkdown>
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <ReactMarkdown>{modal.content}</ReactMarkdown>
+        </div>
       </Modal>
     </>
   );
