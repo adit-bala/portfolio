@@ -40,6 +40,21 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
     content: '',
   });
 
+  // Custom components for ReactMarkdown to make links open in new tabs
+  const markdownComponents = {
+    a: ({ href, children, ...props }: any) => (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-light-blue dark:text-dark-blue hover:underline"
+        {...props}
+      >
+        {children}
+      </a>
+    ),
+  };
+
   React.useEffect(() => {
     const handler = async (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -107,7 +122,7 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
         onClose={() => setModal({ open: false, content: '' })}
       >
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown>{modal.content}</ReactMarkdown>
+          <ReactMarkdown components={markdownComponents}>{modal.content}</ReactMarkdown>
         </div>
       </Modal>
     </>
