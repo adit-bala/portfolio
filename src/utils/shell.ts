@@ -3,10 +3,10 @@ import * as bin from './bin';
 
 const aiPlaceholders = [
   "peering into Aditya's deepest darkest secrets...",
-  'consulting the neural archives...',
-  'brewing some fresh knowledge...',
-  'asking the wise owls of the internet...',
-  "diving into Aditya's brain dump...",
+  "consulting Aditya's alter ego...",
+  'cooking up lies about my creator...',
+  "paging through Aditya's brain dump...",
+  "intruding into Aditya's intrusive thoughts...",
 ];
 const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
