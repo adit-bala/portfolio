@@ -102,8 +102,8 @@ export const Input = ({
   }
 
   return (
-    <div className="flex flex-row space-x-2">
-      <label htmlFor="prompt" className="flex-shrink">
+    <div className="flex flex-col sm:flex-row sm:space-x-2">
+      <label htmlFor="prompt" className="flex-shrink mb-1 sm:mb-0">
         <Ps1 />
       </label>
 

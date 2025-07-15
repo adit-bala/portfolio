@@ -10,10 +10,10 @@ const Modal = ({ open, onClose, children }) => {
       <div
         className="bg-light-background dark:bg-dark-background text-light-foreground dark:text-dark-foreground p-6 rounded shadow-lg border-4 border-blue-500 relative"
         style={{
-          width: '700px',
-          height: '500px',
-          maxWidth: '95vw',
-          maxHeight: '95vh',
+          width: '90vw',
+          height: '80vh',
+          maxWidth: '700px',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -87,7 +87,7 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
     <>
       {history.map((entry: HistoryInterface, index: number) => (
         <div key={entry.command + index}>
-          <div className="flex flex-row space-x-2">
+          <div className="flex flex-col sm:flex-row sm:space-x-2">
             <div className="flex-shrink">
               <Ps1 username={entry.username} />
             </div>
