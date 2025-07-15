@@ -14,7 +14,10 @@ export const Input = ({
   setHistory,
   setLastCommandIndex,
   clearHistory,
+  updateLastEntry,
 }) => {
+  const [processingAi, setProcessingAi] = React.useState(false);
+
   const onSubmit = async (event: React.KeyboardEvent<HTMLInputElement>) => {
     const commands: [string] = history
       .map(({ command }) => command)
@@ -37,10 +40,26 @@ export const Input = ({
       handleTabCompletion(command, setCommand);
     }
 
-    if (event.key === 'Enter' || event.code === '13') {
+    if ((event.key === 'Enter' || event.code === '13') && !processingAi) {
       event.preventDefault();
       setLastCommandIndex(0);
-      await shell(command, setHistory, clearHistory, setCommand);
+
+      const isAiQuery = command.trim().startsWith('!');
+      if (isAiQuery) {
+        setProcessingAi(true);
+      }
+
+      await shell(
+        command,
+        setHistory,
+        updateLastEntry,
+        clearHistory,
+        setCommand,
+      );
+
+      if (isAiQuery) {
+        setProcessingAi(false);
+      }
       containerRef.current.scrollTo(0, containerRef.current.scrollHeight);
     }
 
@@ -77,6 +96,10 @@ export const Input = ({
   }: React.ChangeEvent<HTMLInputElement>) => {
     setCommand(value);
   };
+
+  if (processingAi) {
+    return null;
+  }
 
   return (
     <div className="flex flex-row space-x-2">

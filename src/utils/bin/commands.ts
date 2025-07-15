@@ -72,7 +72,7 @@ export const blog = async () => {
           `<span class=\"blog-title\" data-article-id=\"${row.id}\">${row.title}</span>`,
           row.description,
           tags.length ? tags.join(', ') : '',
-          row.created_at,
+          prettyDate(row.created_at),
         ]
           .filter(Boolean)
           .join(' | ');
@@ -98,9 +98,12 @@ export const banner = (_args?: string[]): string => {
                                                                                       
                                                                                       
 
-Prefix your query with '!' to ask my AI assistant about anything I've written about!
 Type 'help' to see the list of available commands.
 Type 'clear' to clear the terminal.
+
+Prefix your query with '!' to ask my AI assistant about anything I've written about!
+
+For example, try \`!What has Aditya written about running?\`
 `;
 };
 (banner as any).description = 'Display the welcome banner';
@@ -126,5 +129,7 @@ export const ai = async (args: string[]): Promise<string> => {
     }`;
   }
 };
-(ai as any).description =
-  "Prefix your query with '!' to ask my AI assistant about anything I've written about!";
+(ai as any).description = 
+  `Prefix your query with '!' to ask my AI assistant about anything I've written about!
+
+ex. !What has Aditya written about running?`;
