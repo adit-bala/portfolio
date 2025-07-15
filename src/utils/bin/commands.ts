@@ -2,6 +2,7 @@
 import { getDatabase, runQuery } from '../sqlite';
 import * as bin from './index';
 import axios from 'axios';
+import { getFingerprint } from '../fingerprint';
 
 // Help
 export const help = async (_args: string[]): Promise<string> => {
@@ -21,7 +22,7 @@ export const help = async (_args: string[]): Promise<string> => {
 export const about = async () => {
   // Trigger modal event
   const event = new CustomEvent('openModal', {
-    detail: { type: 'about' }
+    detail: { type: 'about' },
   });
   window.dispatchEvent(event);
   return 'Opening about page...';
@@ -31,7 +32,7 @@ export const about = async () => {
 export const contact = async () => {
   // Trigger modal event
   const event = new CustomEvent('openModal', {
-    detail: { type: 'contact' }
+    detail: { type: 'contact' },
   });
   window.dispatchEvent(event);
   return 'Opening contact page...';
@@ -41,7 +42,7 @@ export const contact = async () => {
 export const cv = async () => {
   // Trigger modal event
   const event = new CustomEvent('openModal', {
-    detail: { type: 'cv' }
+    detail: { type: 'cv' },
   });
   window.dispatchEvent(event);
   return 'Opening CV page...';
@@ -112,10 +113,26 @@ For example, try \`!What has Aditya written about running?\`
 export const ai = async (args: string[]): Promise<string> => {
   const question = args.join(' ').trim();
   if (!question) return 'Usage: !<your question>';
+
   try {
+    // Get fingerprint data
+    const { fingerprint, confidence } = await getFingerprint();
+
+    interface ApiRequestPayload {
+      question: string;
+      fingerprint: string;
+      confidence: string;
+    }
+
+    const payload: ApiRequestPayload = {
+      question,
+      fingerprint,
+      confidence: confidence.toString(),
+    };
+
     const response = await axios.post(
       'https://knowledge-base.aditbala.com/ask',
-      { question },
+      payload,
       { headers: { 'Content-Type': 'application/json' } },
     );
     // Try to extract a useful answer
@@ -129,7 +146,8 @@ export const ai = async (args: string[]): Promise<string> => {
     }`;
   }
 };
-(ai as any).description = 
-  `Prefix your query with '!' to ask my AI assistant about anything I've written about!
+(
+  ai as any
+).description = `Prefix your query with '!' to ask my AI assistant about anything I've written about!
 
 ex. !What has Aditya written about running?`;
