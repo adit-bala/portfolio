@@ -75,6 +75,7 @@ export const blog = async () => {
   // Each row: {id, title, description, tags, created_at}
   // tags is JSON string, parse if present
   return (
+    'Title | Description | Tags | Date<br/>' +
     rows
       .map((row: any) => {
         const tags = row.tags ? JSON.parse(row.tags) : [];
