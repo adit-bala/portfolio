@@ -49,6 +49,15 @@ export const cv = async () => {
 };
 (cv as any).description = 'See more about my work!';
 
+export const projects = async () => {
+  // Trigger modal event
+  const event = new CustomEvent('openModal', {
+    detail: { type: 'projects' },
+  });
+  window.dispatchEvent(event);
+};
+(projects as any).description = 'See some of the projects I have created!';
+
 // Blog command
 export const blog = async () => {
   const prettyDate = (date: string) => {
@@ -60,7 +69,7 @@ export const blog = async () => {
   };
 
   const rows = await runQuery(
-    `SELECT id, title, description, tags, created_at FROM notion WHERE status = 'published' AND LOWER(title) != 'about' AND LOWER(title) != 'contact' AND LOWER(title) != 'cv' ORDER BY created_at DESC LIMIT 10`,
+    `SELECT id, title, description, tags, created_at FROM notion WHERE status = 'published' AND (tags IS NULL OR tags = '' OR tags = '[]' OR tags NOT LIKE '%metadata%') ORDER BY created_at DESC LIMIT 10`,
   );
   if (!rows.length) return 'No blog articles found.';
   // Each row: {id, title, description, tags, created_at}
