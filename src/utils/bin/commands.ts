@@ -151,3 +151,95 @@ export const ai = async (args: string[]): Promise<string> => {
 ).description = `Prefix your query with '!' to ask my AI assistant about anything I've written about!
 
 ex. !What has Aditya written about running?`;
+
+// Theme switcher command
+export const theme = async (args: string[]): Promise<string> => {
+  // Dynamically import the theme palette so it is only bundled once and remains tree-shakable
+  const themesModule = await import('../../../themes.json');
+  // .default for ESM / raw object for CJS
+  const themes: Record<string, any> =
+    (themesModule as any).default || themesModule;
+
+  const availableThemes = Object.keys(themes);
+  const requested = (args[0] || '').toLowerCase();
+  const isLightMode = args.includes('-l');
+
+  // If no theme requested or user asked for list, show available options
+  if (!requested || requested === 'list') {
+    return `Available themes: ${availableThemes.join(
+      ', ',
+    )}\n\nUse -l flag for light mode variant (e.g., theme dracula -l)`;
+  }
+
+  // Find case-insensitive match
+  const matchedKey = availableThemes.find((t) => t.toLowerCase() === requested);
+  if (!matchedKey) {
+    return `Theme "${
+      args[0]
+    }" not found. Available themes: ${availableThemes.join(', ')}`;
+  }
+
+  const selectedTheme = themes[matchedKey];
+
+  // Helper to generate CSS that overrides the existing Tailwind-generated classes
+  const generateCss = (themeObj: any, forceLight: boolean = false): string => {
+    let css = '';
+
+    if (forceLight && themeObj.light) {
+      // Force light mode - apply light colors regardless of system preference
+      Object.entries(themeObj.light).forEach(([name, hex]) => {
+        css += `\n.bg-light-${name}{background-color:${hex} !important;}\n`;
+        css += `.text-light-${name}{color:${hex} !important;}\n`;
+        css += `.border-light-${name}{border-color:${hex} !important;}\n`;
+        // Override dark mode classes to use light colors
+        css += `.dark\\:bg-dark-${name}{background-color:${hex} !important;}\n`;
+        css += `.dark\\:text-dark-${name}{color:${hex} !important;}\n`;
+        css += `.dark\\:border-dark-${name}{border-color:${hex} !important;}\n`;
+      });
+    } else {
+      // Normal behavior - light colors for light mode, dark colors for dark mode
+      if (themeObj.light) {
+        Object.entries(themeObj.light).forEach(([name, hex]) => {
+          css += `\n.bg-light-${name}{background-color:${hex} !important;}\n`;
+          css += `.text-light-${name}{color:${hex} !important;}\n`;
+          css += `.border-light-${name}{border-color:${hex} !important;}\n`;
+        });
+      }
+
+      // Dark palette overrides (inside media-query so light mode is unaffected)
+      if (themeObj.dark) {
+        css += '\n@media (prefers-color-scheme: dark){';
+        Object.entries(themeObj.dark).forEach(([name, hex]) => {
+          css += `\n.dark\\:bg-dark-${name}{background-color:${hex} !important;}\n`;
+          css += `.dark\\:text-dark-${name}{color:${hex} !important;}\n`;
+          css += `.dark\\:border-dark-${name}{border-color:${hex} !important;}\n`;
+        });
+        css += '}';
+      }
+    }
+    return css;
+  };
+
+  // Inject (or replace) the <style> block that contains the generated overrides
+  const styleId = 'dynamic-theme';
+  let styleEl = document.getElementById(styleId) as HTMLStyleElement;
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = styleId;
+    document.head.appendChild(styleEl);
+  }
+  styleEl.innerHTML = generateCss(selectedTheme, isLightMode);
+
+  // Persist the selection so it can be restored on reload (optional)
+  try {
+    localStorage.setItem('selectedTheme', matchedKey);
+    localStorage.setItem('themeLightMode', isLightMode.toString());
+  } catch (_e) {
+    // Ignore if browser storage is unavailable (e.g., privacy mode)
+  }
+
+  const modeText = isLightMode ? ' (light mode)' : '';
+  return `Theme changed to ${matchedKey}${modeText}.`;
+};
+(theme as any).description =
+  "Change the site's colour theme. Usage: theme <theme_name> | theme <theme_name> -l";
