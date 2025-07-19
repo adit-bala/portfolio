@@ -2,6 +2,8 @@ import React from 'react';
 import { History as HistoryInterface } from './interface';
 import { Ps1 } from '../Ps1';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import { marked } from 'marked';
 
 const Modal = ({ open, onClose, children }) => {
   if (!open) return null;
@@ -53,6 +55,19 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
         {children}
       </a>
     ),
+  };
+
+  // Separate component for summary – render markdown inside
+  const SummaryComponent = ({ children, ...props }: any) => {
+    // children can be array of strings; join them
+    const raw = Array.isArray(children) ? children.join('') : children;
+    const html = marked.parse(raw || '');
+    return (
+      <summary
+        dangerouslySetInnerHTML={{ __html: html }}
+        {...props}
+      />
+    );
   };
 
   React.useEffect(() => {
@@ -122,7 +137,15 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
         onClose={() => setModal({ open: false, content: '' })}
       >
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown components={markdownComponents}>{modal.content}</ReactMarkdown>
+          <ReactMarkdown 
+            components={{
+              ...markdownComponents,
+              summary: SummaryComponent,
+            }} 
+            rehypePlugins={[rehypeRaw as any]}
+          >
+            {modal.content}
+          </ReactMarkdown>
         </div>
       </Modal>
     </>

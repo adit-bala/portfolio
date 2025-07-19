@@ -82,3 +82,64 @@ div#__next > div {
 .blog-title:hover {
   color: #b8bb26;
 }
+
+/* Details and Summary styling for Notion dropdowns */
+details {
+  margin: 1rem 0;
+  padding: 0.5rem;
+  border: 1px solid #ebdbb2;
+  border-radius: 4px;
+  background: rgba(235, 219, 178, 0.1);
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #ebdbb2;
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+  display: list-item;
+  list-style-type: disclosure-closed;
+}
+
+summary::marker {
+  color: #ebdbb2;
+  font-size: 0.9em;
+  margin-right: 0.5rem;
+}
+
+details[open] summary {
+  list-style-type: disclosure-open;
+}
+
+/* Ensure summary content is properly aligned */
+summary > * {
+  display: inline;
+  vertical-align: middle;
+}
+
+/* Style links within summary */
+summary a {
+  color: #83a598;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+summary a:hover {
+  color: #b8bb26;
+}
+
+summary:hover {
+  background: rgba(235, 219, 178, 0.2);
+}
+
+details[open] summary {
+  border-bottom: 1px solid #ebdbb2;
+  margin-bottom: 0.5rem;
+  list-style-type: disclosure-open;
+}
+
+details > *:not(summary) {
+  padding: 0.5rem;
+}
