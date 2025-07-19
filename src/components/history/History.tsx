@@ -28,7 +28,9 @@ const Modal = ({ open, onClose, children }) => {
         >
           ×
         </button>
-        <div style={{ overflowY: 'auto', flex: 1, marginTop: '2.5rem' }}>{children}</div>
+        <div style={{ overflowY: 'auto', flex: 1, marginTop: '2.5rem' }}>
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -62,12 +64,7 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
     // children can be array of strings; join them
     const raw = Array.isArray(children) ? children.join('') : children;
     const html = marked.parse(raw || '');
-    return (
-      <summary
-        dangerouslySetInnerHTML={{ __html: html }}
-        {...props}
-      />
-    );
+    return <summary dangerouslySetInnerHTML={{ __html: html }} {...props} />;
   };
 
   React.useEffect(() => {
@@ -137,11 +134,11 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
         onClose={() => setModal({ open: false, content: '' })}
       >
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown 
+          <ReactMarkdown
             components={{
               ...markdownComponents,
               summary: SummaryComponent,
-            }} 
+            }}
             rehypePlugins={[rehypeRaw as any]}
           >
             {modal.content}
