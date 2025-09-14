@@ -4,6 +4,7 @@ import { Ps1 } from '../Ps1';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { marked } from 'marked';
+import Image from 'next/image';
 
 const Modal = ({ open, onClose, children }) => {
   if (!open) return null;
@@ -56,6 +57,24 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
       >
         {children}
       </a>
+    ),
+    img: ({ src, alt, title, ...props }: any) => (
+      <div className="my-4">
+        <Image
+          src={src}
+          alt={alt}
+          title={title}
+          width={800}
+          height={600}
+          className="max-w-full h-auto rounded-lg shadow-md"
+          {...props}
+        />
+        {alt && (
+          <p className="text-xs text-light-gray dark:text-dark-gray mt-2 text-left italic">
+            {alt}
+          </p>
+        )}
+      </div>
     ),
   };
 

@@ -1,4 +1,14 @@
 module.exports = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'assets-knowledge-base.aditbala.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
   webpack: (config, { isServer }) => {
     // Avoid bundling server-only modules that sql.js pulls in.
     config.resolve = config.resolve || {};

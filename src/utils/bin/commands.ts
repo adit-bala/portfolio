@@ -58,6 +58,16 @@ export const projects = async () => {
 };
 (projects as any).description = 'See some of the projects I have created!';
 
+// Twitter
+export const twitter = async () => {
+  // Trigger modal event
+  const event = new CustomEvent('openModal', {
+    detail: { type: 'twitter' },
+  });
+  window.dispatchEvent(event);
+};
+(twitter as any).description = 'See my tweets!';
+
 // Blog command
 export const blog = async () => {
   const prettyDate = (date: string) => {
