@@ -1,30 +1,34 @@
-import initSqlJs, { Database } from 'sql.js';
+import { PGlite } from '@electric-sql/pglite';
+import { vector } from '@electric-sql/pglite/vector';
 
 // This promise will cache the loaded/initialized database so we only fetch and parse it once.
-let dbPromise: Promise<Database> | null = null;
+let dbPromise: Promise<PGlite> | null = null;
 
 /**
- * Loads the SQLite database that lives in `public/notion.db` using sql.js.
- * The underlying WASM file must be available at `/sql-wasm.wasm`.
+ * Loads the PGlite database from the gzipped tarball at `/notion.db.tar.gz`.
+ * Uses PGlite's loadDataDir option to load from a pre-built database dump.
  */
-export const getDatabase = async (): Promise<Database> => {
+export const getDatabase = async (): Promise<PGlite> => {
   if (dbPromise) return dbPromise;
 
   dbPromise = (async () => {
-    // Initialise sql.js and point it to the wasm file served from the public folder.
-    const SQL = await initSqlJs({
-      locateFile: (file) => `/${file}`,
-    });
-
-    // Fetch the bundled database file.
-    const response = await fetch('/notion.db');
+    // Fetch the bundled database tarball.
+    const response = await fetch('/notion.db.tar.gz');
     if (!response.ok) {
-      throw new Error(`Could not fetch /notion.db – status ${response.status}`);
+      throw new Error(
+        `Could not fetch /notion.db.tar.gz – status ${response.status}`,
+      );
     }
     const buffer = await response.arrayBuffer();
+    const blob = new Blob([buffer]);
 
-    // Create the database instance from the binary data.
-    return new SQL.Database(new Uint8Array(buffer));
+    // Create the PGlite instance from the tarball data.
+    const db = await PGlite.create({
+      extensions: { vector },
+      loadDataDir: blob,
+    });
+
+    return db;
   })();
 
   return dbPromise;
@@ -32,7 +36,7 @@ export const getDatabase = async (): Promise<Database> => {
 
 /**
  * Run a parameterized query and return results as array of objects.
- * @param sql SQL query string
+ * @param sql SQL query string (use $1, $2, etc. for parameters)
  * @param params Optional parameters for the query
  */
 export async function runQuery<T = any>(
@@ -40,12 +44,6 @@ export async function runQuery<T = any>(
   params?: any[],
 ): Promise<T[]> {
   const db = await getDatabase();
-  const stmt = db.prepare(sql);
-  if (params) stmt.bind(params);
-  const rows: T[] = [];
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject() as T);
-  }
-  stmt.free();
-  return rows;
+  const result = await db.query<T>(sql, params);
+  return result.rows;
 }

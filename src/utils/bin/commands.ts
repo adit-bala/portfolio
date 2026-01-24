@@ -1,5 +1,5 @@
 // List of commands that do not require API calls
-import { getDatabase, runQuery } from '../sqlite';
+import { runQuery } from '../sqlite';
 import * as bin from './index';
 import axios from 'axios';
 import { getFingerprint } from '../fingerprint';
@@ -79,16 +79,17 @@ export const blog = async () => {
   };
 
   const rows = await runQuery(
-    `SELECT id, title, description, tags, created_at FROM notion WHERE status = 'published' AND (tags IS NULL OR tags = '' OR tags = '[]' OR tags NOT LIKE '%metadata%') ORDER BY created_at DESC LIMIT 10`,
+    `SELECT id, title, description, tags, created_at FROM article WHERE status = 'published' AND NOT ('metadata' = ANY(tags)) ORDER BY created_at DESC LIMIT 10`,
   );
   if (!rows.length) return 'No blog articles found.';
   // Each row: {id, title, description, tags, created_at}
-  // tags is JSON string, parse if present
+  // tags is a PostgreSQL TEXT[] array
   return (
     'Title | Description | Tags | Date<br/>' +
     rows
       .map((row: any) => {
-        const tags = row.tags ? JSON.parse(row.tags) : [];
+        // tags is already an array in PostgreSQL
+        const tags = Array.isArray(row.tags) ? row.tags : [];
         return [
           `<span class=\"blog-title\" data-article-id=\"${row.id}\">${row.title}</span>`,
           row.description,

@@ -92,15 +92,14 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
       if (target.classList.contains('blog-title')) {
         const articleId = target.getAttribute('data-article-id');
         if (articleId) {
-          // Fetch markdown for this article
-          const { getDatabase } = await import('../../utils/sqlite');
-          const db = await getDatabase();
-          const rows = db.exec(
-            `SELECT markdown, title FROM notion WHERE id = '${articleId}' LIMIT 1`,
+          // Fetch markdown for this article using PGlite
+          const { runQuery } = await import('../../utils/sqlite');
+          const rows = await runQuery<{ markdown: string; title: string }>(
+            `SELECT markdown, title FROM article WHERE id = $1 LIMIT 1`,
+            [articleId],
           );
-          if (rows.length && rows[0].values.length) {
-            const [markdown, title] = rows[0].values[0];
-            setModal({ open: true, content: markdown });
+          if (rows.length) {
+            setModal({ open: true, content: rows[0].markdown });
           }
         }
       }
@@ -109,14 +108,13 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
     // Handle modal events from commands
     const modalHandler = async (e: CustomEvent) => {
       const { type } = e.detail;
-      const { getDatabase } = await import('../../utils/sqlite');
-      const db = await getDatabase();
-      const rows = db.exec(
-        `SELECT markdown FROM notion WHERE LOWER(title) = '${type}' LIMIT 1`,
+      const { runQuery } = await import('../../utils/sqlite');
+      const rows = await runQuery<{ markdown: string }>(
+        `SELECT markdown FROM article WHERE LOWER(title) = $1 LIMIT 1`,
+        [type],
       );
-      if (rows.length && rows[0].values.length) {
-        const [markdown] = rows[0].values[0];
-        setModal({ open: true, content: markdown });
+      if (rows.length) {
+        setModal({ open: true, content: rows[0].markdown });
       }
     };
 
