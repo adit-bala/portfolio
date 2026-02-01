@@ -129,21 +129,21 @@ For example, try \`!What does Aditya like to do?\`
 (banner as any).description = 'Display the welcome banner';
 
 // AI Assistant command: !<query>
-// Uses hybrid search: Transformers.js embeddings + pgvector + full-text search
+// Uses retrieve-then-rerank: hybrid search + Jina Reranker v2 cross-encoder
 export const ai = async (args: string[]): Promise<string> => {
   const question = args.join(' ').trim();
   if (!question) return 'Usage: !<your question>';
 
   try {
-    // Dynamically import embeddings to avoid SSR issues
-    const { generateEmbedding } = await import('../embeddings');
+    // Dynamically import embeddings and reranker to avoid SSR issues
+    const { generateEmbedding, rerank } = await import('../embeddings');
 
     // Generate embedding for the query using Transformers.js
     const queryEmbedding = await generateEmbedding(question);
 
-    // Hybrid search: combine vector similarity (60%) + full-text search (40%)
-    // Uses RRF (Reciprocal Rank Fusion) style scoring
-    const rows = await runQuery<{
+    // Step 1: Retrieve top 20 candidates using hybrid search
+    // Combines vector similarity (60%) + full-text search (40%)
+    const candidates = await runQuery<{
       id: string;
       title: string;
       description: string;
@@ -182,25 +182,39 @@ export const ai = async (args: string[]): Promise<string> => {
       FROM vector_search v
       LEFT JOIN fts_search f ON v.id = f.id
       ORDER BY hybrid_score DESC
-      LIMIT 5
+      LIMIT 20
       `,
       [JSON.stringify(queryEmbedding), question],
     );
 
-    if (rows.length === 0) {
+    if (candidates.length === 0) {
       return `No articles found. Try a different query!`;
     }
 
+    // Step 2: Rerank top candidates using Jina Reranker v2 cross-encoder
+    // Prepare documents for reranking (title + description)
+    const documents = candidates.map(c => `${c.title}. ${c.description}`);
+    const rerankerScores = await rerank(question, documents);
+
+    // Combine candidates with reranker scores and sort
+    const reranked = candidates
+      .map((candidate, i) => ({
+        ...candidate,
+        reranker_score: rerankerScores[i],
+      }))
+      .sort((a, b) => b.reranker_score - a.reranker_score)
+      .slice(0, 5); // Take top 5 after reranking
+
     // Format output with article titles and descriptions
-    const output = rows
+    const output = reranked
       .map((row, i) => {
         const title = `<span class="blog-title" data-article-id="${row.id}">${row.title}</span>`;
-        const scorePercent = (row.vector_score * 100).toFixed(0);
+        const scorePercent = (row.reranker_score * 100).toFixed(0);
         return `${i + 1}. ${title} (${scorePercent}% match)\n   ${row.description}`;
       })
       .join('\n\n');
 
-    return `Found ${rows.length} relevant article${rows.length > 1 ? 's' : ''}:\n\n${output}`;
+    return `Found ${reranked.length} relevant article${reranked.length > 1 ? 's' : ''}:\n\n${output}`;
   } catch (err: any) {
     return `Error searching knowledge base: ${err?.message || 'Unknown error'}`;
   }

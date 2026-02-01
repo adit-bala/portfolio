@@ -29,6 +29,14 @@ const IndexPage: React.FC<IndexPageProps> = ({ inputRef }) => {
     init();
   }, [init]);
 
+  // Preload AI models in the background on page load
+  React.useEffect(() => {
+    // Dynamically import to avoid SSR issues
+    import('../utils/embeddings').then(({ preloadModels }) => {
+      preloadModels().catch(console.error);
+    });
+  }, []);
+
   // Enhanced focus and scroll behavior
   React.useEffect(() => {
     if (inputRef.current) {
