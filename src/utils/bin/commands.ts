@@ -137,7 +137,7 @@ export const blog = async () => {
     '─'.repeat(dateWidth);
 
   // Build rows
-  const tableRows = rows.map((row: any) => {
+  const tableRows = rows.map((row: any, index: number) => {
     const tags = Array.isArray(row.tags) ? row.tags : [];
     const tagsStr = tags.length ? tags.join(', ') : '';
     const dateStr = prettyDate(row.created_at);
@@ -170,6 +170,16 @@ export const blog = async () => {
         ' '.repeat(tagsWidth) + ' │ ' +
         ' '.repeat(dateWidth)
       );
+    }
+
+    // Add row separator after each entry (except the last one)
+    if (index < rows.length - 1) {
+      const rowSeparator =
+        '─'.repeat(titleWidth) + '─┼─' +
+        '─'.repeat(descWidth) + '─┼─' +
+        '─'.repeat(tagsWidth) + '─┼─' +
+        '─'.repeat(dateWidth);
+      lines.push(rowSeparator);
     }
 
     return lines.join('<br/>');
