@@ -219,28 +219,35 @@ export const ai = async (args: string[]): Promise<string> => {
     }
 
     // Step 2: Rerank top candidates using Jina Reranker v2 cross-encoder
-    // Prepare documents for reranking (title + description)
-    const documents = candidates.map(c => `${c.title}. ${c.description}`);
-    const rerankerScores = await rerank(question, documents);
+    // If reranking fails, fall back to hybrid search results
+    let results = candidates.slice(0, 5); // Default to top 5 from hybrid search
 
-    // Combine candidates with reranker scores and sort
-    const reranked = candidates
-      .map((candidate, i) => ({
-        ...candidate,
-        reranker_score: rerankerScores[i],
-      }))
-      .sort((a, b) => b.reranker_score - a.reranker_score)
-      .slice(0, 5); // Take top 5 after reranking
+    try {
+      const documents = candidates.map((c) => `${c.title}. ${c.description}`);
+      const rerankerScores = await rerank(question, documents);
+
+      // Combine candidates with reranker scores and sort
+      results = candidates
+        .map((candidate, i) => ({
+          ...candidate,
+          reranker_score: rerankerScores[i],
+        }))
+        .sort((a, b) => b.reranker_score - a.reranker_score)
+        .slice(0, 5); // Take top 5 after reranking
+    } catch (rerankerErr) {
+      // Silently fall back to hybrid search results
+      console.warn('Reranker failed, using hybrid search results:', rerankerErr);
+    }
 
     // Format output with article titles and descriptions
-    const output = reranked
+    const output = results
       .map((row, i) => {
         const title = `<span class="blog-title" data-article-id="${row.id}">${row.title}</span>`;
         return `${i + 1}. ${title}\n   ${row.description}`;
       })
       .join('\n\n');
 
-    return `Found ${reranked.length} relevant article${reranked.length > 1 ? 's' : ''}:\n\n${output}`;
+    return `Found ${results.length} relevant article${results.length > 1 ? 's' : ''}:\n\n${output}`;
   } catch (err: any) {
     return `Error searching knowledge base: ${err?.message || 'Unknown error'}`;
   }
