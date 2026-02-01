@@ -80,25 +80,61 @@ export const blog = async () => {
     `SELECT id, title, description, tags, created_at FROM article WHERE status = 'published' AND NOT ('metadata' = ANY(tags)) ORDER BY created_at DESC LIMIT 10`,
   );
   if (!rows.length) return 'No blog articles found.';
-  // Each row: {id, title, description, tags, created_at}
-  // tags is a PostgreSQL TEXT[] array
+
+  // Helper to truncate and pad strings
+  const truncate = (str: string, maxLen: number) => {
+    if (str.length <= maxLen) return str;
+    return str.slice(0, maxLen - 3) + '...';
+  };
+
+  const pad = (str: string, len: number) => {
+    return str + ' '.repeat(Math.max(0, len - str.length));
+  };
+
+  // Column widths
+  const titleWidth = 30;
+  const descWidth = 50;
+  const tagsWidth = 20;
+  const dateWidth = 18;
+
+  // Build header
+  const header =
+    pad('TITLE', titleWidth) + ' │ ' +
+    pad('DESCRIPTION', descWidth) + ' │ ' +
+    pad('TAGS', tagsWidth) + ' │ ' +
+    'DATE';
+
+  const separator =
+    '─'.repeat(titleWidth) + '─┼─' +
+    '─'.repeat(descWidth) + '─┼─' +
+    '─'.repeat(tagsWidth) + '─┼─' +
+    '─'.repeat(dateWidth);
+
+  // Build rows
+  const tableRows = rows.map((row: any) => {
+    const tags = Array.isArray(row.tags) ? row.tags : [];
+    const tagsStr = tags.length ? tags.join(', ') : '';
+    const dateStr = prettyDate(row.created_at);
+
+    // For title, we need to preserve the clickable span but pad the visible text
+    const titleText = row.title;
+    const truncatedTitle = truncate(titleText, titleWidth);
+    const paddedTitle = pad(truncatedTitle, titleWidth);
+    const titleWithLink = `<span class="blog-title" data-article-id="${row.id}">${paddedTitle}</span>`;
+
+    return (
+      titleWithLink + ' │ ' +
+      pad(truncate(row.description, descWidth), descWidth) + ' │ ' +
+      pad(truncate(tagsStr, tagsWidth), tagsWidth) + ' │ ' +
+      dateStr
+    );
+  }).join('<br/>');
+
   return (
-    'Title | Description | Tags | Date<br/>' +
-    rows
-      .map((row: any) => {
-        // tags is already an array in PostgreSQL
-        const tags = Array.isArray(row.tags) ? row.tags : [];
-        return [
-          `<span class=\"blog-title\" data-article-id=\"${row.id}\">${row.title}</span>`,
-          row.description,
-          tags.length ? tags.join(', ') : '',
-          prettyDate(row.created_at),
-        ]
-          .filter(Boolean)
-          .join(' | ');
-      })
-      .join('<br/>') +
-    '<br/><span class="blog-hint">Click a title to view the article.</span>'
+    header + '<br/>' +
+    separator + '<br/>' +
+    tableRows + '<br/><br/>' +
+    '<span class="blog-hint">Click a title to view the article.</span>'
   );
 };
 (blog as any).description = 'List all blog articles. Click a title to view.';
