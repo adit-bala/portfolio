@@ -219,21 +219,33 @@ export const ai = async (args: string[]): Promise<string> => {
     }
 
     // Step 2: Rerank top candidates using Jina Reranker v2 cross-encoder
-    // If reranking fails, fall back to hybrid search results
+    // If reranking fails or takes too long, fall back to hybrid search results
     let results = candidates.slice(0, 5); // Default to top 5 from hybrid search
 
     try {
       const documents = candidates.map((c) => `${c.title}. ${c.description}`);
-      const rerankerScores = await rerank(question, documents);
 
-      // Combine candidates with reranker scores and sort
-      results = candidates
-        .map((candidate, i) => ({
-          ...candidate,
-          reranker_score: rerankerScores[i],
-        }))
-        .sort((a, b) => b.reranker_score - a.reranker_score)
-        .slice(0, 5); // Take top 5 after reranking
+      // Race between reranker and 5-second timeout
+      const rerankerPromise = rerank(question, documents);
+      const timeoutPromise = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 5000)
+      );
+
+      const rerankerScores = await Promise.race([rerankerPromise, timeoutPromise]);
+
+      // If timeout occurred, use hybrid search results
+      if (rerankerScores === null) {
+        console.warn('Reranker timeout, using hybrid search results');
+      } else {
+        // Combine candidates with reranker scores and sort
+        results = candidates
+          .map((candidate, i) => ({
+            ...candidate,
+            reranker_score: rerankerScores[i],
+          }))
+          .sort((a, b) => b.reranker_score - a.reranker_score)
+          .slice(0, 5); // Take top 5 after reranking
+      }
     } catch (rerankerErr) {
       // Silently fall back to hybrid search results
       console.warn('Reranker failed, using hybrid search results:', rerankerErr);
