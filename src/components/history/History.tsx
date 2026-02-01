@@ -109,12 +109,12 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
 
         if (tag && commandId) {
           // Check if this is the active blog command
-          const { getActiveBlogCommandId, toggleBlogTag } = await import('../../utils/bin/commands');
-          const activeId = getActiveBlogCommandId();
+          const { __blogInternals } = await import('../../utils/bin/commands');
+          const activeId = __blogInternals.getActiveBlogCommandId();
 
           if (activeId !== null && activeId.toString() === commandId) {
             // Toggle the tag selection
-            toggleBlogTag(tag);
+            __blogInternals.toggleBlogTag(tag);
 
             // Trigger refresh of blog view
             const event = new CustomEvent('refreshBlogView');

@@ -102,14 +102,14 @@ export const Input = ({
 
       // Handle blog command state
       const trimmedCommand = command.trim().toLowerCase();
-      const { resetBlogFilters, setActiveBlogCommandId } = await import('../utils/bin/commands');
+      const { __blogInternals } = await import('../utils/bin/commands');
 
       if (trimmedCommand === 'blog' || trimmedCommand.startsWith('blog ')) {
         // Reset filters when running a new blog command
-        resetBlogFilters();
+        __blogInternals.resetBlogFilters();
       } else {
         // Clear active blog command ID when running any other command
-        setActiveBlogCommandId(null);
+        __blogInternals.setActiveBlogCommandId(null);
       }
 
       await shell(

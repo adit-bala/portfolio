@@ -67,13 +67,13 @@ export const twitter = async () => {
 (twitter as any).description = 'See my tweets!';
 
 // Store selected tags globally for the blog command
-export let selectedBlogTags: Set<string> = new Set();
+let selectedBlogTags: Set<string> = new Set();
 
 // Track the ID of the current active blog command
 let activeBlogCommandId: number | null = null;
 
-// Helper to toggle a tag selection
-export const toggleBlogTag = (tag: string) => {
+// Helper to toggle a tag selection (internal use only)
+const toggleBlogTag = (tag: string) => {
   if (selectedBlogTags.has(tag)) {
     selectedBlogTags.delete(tag);
   } else {
@@ -82,17 +82,25 @@ export const toggleBlogTag = (tag: string) => {
 };
 
 // Reset tag filters (called when a new blog command is run)
-export const resetBlogFilters = () => {
+const resetBlogFilters = () => {
   selectedBlogTags.clear();
 };
 
 // Set the active blog command ID
-export const setActiveBlogCommandId = (id: number | null) => {
+const setActiveBlogCommandId = (id: number | null) => {
   activeBlogCommandId = id;
 };
 
 // Get the active blog command ID
-export const getActiveBlogCommandId = () => activeBlogCommandId;
+const getActiveBlogCommandId = () => activeBlogCommandId;
+
+// Export only what's needed for external imports (not as commands)
+export const __blogInternals = {
+  toggleBlogTag,
+  resetBlogFilters,
+  setActiveBlogCommandId,
+  getActiveBlogCommandId,
+};
 
 // Blog command
 export const blog = async (args: string[]) => {
@@ -126,24 +134,30 @@ export const blog = async (args: string[]) => {
   });
 
   // Build tag filter UI with multi-select support
-  const tagBubbles = Array.from(allTags).sort().map((tag) => {
-    const isSelected = selectedBlogTags.has(tag);
-    const style = isSelected
-      ? 'background-color: #4a9eff; color: #000; padding: 2px 8px; border-radius: 4px; cursor: pointer;'
-      : 'border: 1px solid currentColor; padding: 2px 8px; border-radius: 4px; cursor: pointer;';
-    return `<span class="blog-tag-filter" data-tag="${tag}" data-command-id="${commandId}" style="${style}">${tag}</span>`;
-  }).join(' ');
+  const tagBubbles = Array.from(allTags)
+    .sort()
+    .map((tag) => {
+      const isSelected = selectedBlogTags.has(tag);
+      const style = isSelected
+        ? 'background-color: #4a9eff; color: #000; padding: 2px 8px; border-radius: 4px; cursor: pointer;'
+        : 'border: 1px solid currentColor; padding: 2px 8px; border-radius: 4px; cursor: pointer;';
+      return `<span class="blog-tag-filter" data-tag="${tag}" data-command-id="${commandId}" style="${style}">${tag}</span>`;
+    })
+    .join(' ');
 
   const tagFilterSection = `TAGS: ${tagBubbles}<br/><br/>`;
 
   // Filter rows by selected tags if any
-  const rows = selectedBlogTags.size > 0
-    ? allRows.filter((row: any) => {
-        const tags = Array.isArray(row.tags) ? row.tags : [];
-        // Article must have at least one of the selected tags
-        return tags.some((tag: string) => selectedBlogTags.has(tag));
-      }).slice(0, 20)
-    : allRows.slice(0, 20);
+  const rows =
+    selectedBlogTags.size > 0
+      ? allRows
+          .filter((row: any) => {
+            const tags = Array.isArray(row.tags) ? row.tags : [];
+            // Article must have at least one of the selected tags
+            return tags.some((tag: string) => selectedBlogTags.has(tag));
+          })
+          .slice(0, 20)
+      : allRows.slice(0, 20);
 
   if (!rows.length) {
     return tagFilterSection + `No articles found with selected tags.`;
@@ -193,77 +207,99 @@ export const blog = async (args: string[]) => {
 
   // Build header
   const header =
-    pad('TITLE', titleWidth) + ' │ ' +
-    pad('DESCRIPTION', descWidth) + ' │ ' +
-    pad('TAGS', tagsWidth) + ' │ ' +
+    pad('TITLE', titleWidth) +
+    ' │ ' +
+    pad('DESCRIPTION', descWidth) +
+    ' │ ' +
+    pad('TAGS', tagsWidth) +
+    ' │ ' +
     'DATE';
 
   const separator =
-    '─'.repeat(titleWidth) + '─┼─' +
-    '─'.repeat(descWidth) + '─┼─' +
-    '─'.repeat(tagsWidth) + '─┼─' +
+    '─'.repeat(titleWidth) +
+    '─┼─' +
+    '─'.repeat(descWidth) +
+    '─┼─' +
+    '─'.repeat(tagsWidth) +
+    '─┼─' +
     '─'.repeat(dateWidth);
 
   // Build rows
-  const tableRows = rows.map((row: any, index: number) => {
-    const tags = Array.isArray(row.tags) ? row.tags : [];
-    const dateStr = prettyDate(row.created_at);
+  const tableRows = rows
+    .map((row: any, index: number) => {
+      const tags = Array.isArray(row.tags) ? row.tags : [];
+      const dateStr = prettyDate(row.created_at);
 
-    // Format tags as text with brackets (will be styled later)
-    const tagsText = tags.map(tag => `[${tag}]`).join(' ');
+      // Format tags as text with brackets (will be styled later)
+      const tagsText = tags.map((tag) => `[${tag}]`).join(' ');
 
-    // Wrap description and tags to multiple lines
-    const descLines = wrapText(row.description, descWidth);
-    const tagLines = wrapText(tagsText, tagsWidth);
+      // Wrap description and tags to multiple lines
+      const descLines = wrapText(row.description, descWidth);
+      const tagLines = wrapText(tagsText, tagsWidth);
 
-    // For title, truncate if needed but only wrap the actual text in the link
-    const titleText = row.title;
-    const truncatedTitle = truncate(titleText, titleWidth);
-    const titlePadding = ' '.repeat(Math.max(0, titleWidth - truncatedTitle.length));
-    const titleWithLink = `<span class="blog-title" data-article-id="${row.id}">${truncatedTitle}</span>${titlePadding}`;
-
-    // Build multi-line row
-    const lines: string[] = [];
-
-    // Determine max lines needed
-    const maxLines = Math.max(descLines.length, tagLines.length);
-
-    // First line has all columns
-    lines.push(
-      titleWithLink + ' │ ' +
-      pad(descLines[0] || '', descWidth) + ' │ ' +
-      pad(tagLines[0] || '', tagsWidth) + ' │ ' +
-      dateStr
-    );
-
-    // Additional lines for wrapped content
-    for (let i = 1; i < maxLines; i++) {
-      lines.push(
-        ' '.repeat(titleWidth) + ' │ ' +
-        pad(descLines[i] || '', descWidth) + ' │ ' +
-        pad(tagLines[i] || '', tagsWidth) + ' │ ' +
-        ' '.repeat(dateWidth)
+      // For title, truncate if needed but only wrap the actual text in the link
+      const titleText = row.title;
+      const truncatedTitle = truncate(titleText, titleWidth);
+      const titlePadding = ' '.repeat(
+        Math.max(0, titleWidth - truncatedTitle.length),
       );
-    }
+      const titleWithLink = `<span class="blog-title" data-article-id="${row.id}">${truncatedTitle}</span>${titlePadding}`;
 
-    // Add row separator after each entry (except the last one)
-    if (index < rows.length - 1) {
-      const rowSeparator =
-        '─'.repeat(titleWidth) + '─┼─' +
-        '─'.repeat(descWidth) + '─┼─' +
-        '─'.repeat(tagsWidth) + '─┼─' +
-        '─'.repeat(dateWidth);
-      lines.push(rowSeparator);
-    }
+      // Build multi-line row
+      const lines: string[] = [];
 
-    return lines.join('<br/>');
-  }).join('<br/>');
+      // Determine max lines needed
+      const maxLines = Math.max(descLines.length, tagLines.length);
+
+      // First line has all columns
+      lines.push(
+        titleWithLink +
+          ' │ ' +
+          pad(descLines[0] || '', descWidth) +
+          ' │ ' +
+          pad(tagLines[0] || '', tagsWidth) +
+          ' │ ' +
+          dateStr,
+      );
+
+      // Additional lines for wrapped content
+      for (let i = 1; i < maxLines; i++) {
+        lines.push(
+          ' '.repeat(titleWidth) +
+            ' │ ' +
+            pad(descLines[i] || '', descWidth) +
+            ' │ ' +
+            pad(tagLines[i] || '', tagsWidth) +
+            ' │ ' +
+            ' '.repeat(dateWidth),
+        );
+      }
+
+      // Add row separator after each entry (except the last one)
+      if (index < rows.length - 1) {
+        const rowSeparator =
+          '─'.repeat(titleWidth) +
+          '─┼─' +
+          '─'.repeat(descWidth) +
+          '─┼─' +
+          '─'.repeat(tagsWidth) +
+          '─┼─' +
+          '─'.repeat(dateWidth);
+        lines.push(rowSeparator);
+      }
+
+      return lines.join('<br/>');
+    })
+    .join('<br/>');
 
   return (
     tagFilterSection +
-    header + '<br/>' +
-    separator + '<br/>' +
-    tableRows + '<br/><br/>' +
+    header +
+    '<br/>' +
+    separator +
+    '<br/>' +
+    tableRows +
+    '<br/><br/>' +
     '<span class="blog-hint">Click a title to view the article. Click a tag to filter.</span>'
   );
 };
@@ -394,10 +430,13 @@ export const ai = async (args: string[]): Promise<string> => {
       // Race between reranker and 5-second timeout
       const rerankerPromise = rerank(question, documents);
       const timeoutPromise = new Promise<null>((resolve) =>
-        setTimeout(() => resolve(null), 5000)
+        setTimeout(() => resolve(null), 5000),
       );
 
-      const rerankerScores = await Promise.race([rerankerPromise, timeoutPromise]);
+      const rerankerScores = await Promise.race([
+        rerankerPromise,
+        timeoutPromise,
+      ]);
 
       // If timeout occurred, use hybrid search results
       if (rerankerScores === null) {
@@ -414,7 +453,10 @@ export const ai = async (args: string[]): Promise<string> => {
       }
     } catch (rerankerErr) {
       // Silently fall back to hybrid search results
-      console.warn('Reranker failed, using hybrid search results:', rerankerErr);
+      console.warn(
+        'Reranker failed, using hybrid search results:',
+        rerankerErr,
+      );
     }
 
     // Format output with article titles and descriptions
@@ -425,7 +467,9 @@ export const ai = async (args: string[]): Promise<string> => {
       })
       .join('\n\n');
 
-    return `Found ${results.length} relevant article${results.length > 1 ? 's' : ''}:\n\n${output}`;
+    return `Found ${results.length} relevant article${
+      results.length > 1 ? 's' : ''
+    }:\n\n${output}`;
   } catch (err: any) {
     return `Error searching knowledge base: ${err?.message || 'Unknown error'}`;
   }
