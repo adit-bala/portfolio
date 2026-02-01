@@ -164,6 +164,25 @@ export const blog = async (args: string[]) => {
     return tagFilterSection + `No articles found with selected tags.`;
   }
 
+  // Check if mobile (simple heuristic based on window width)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // Mobile-friendly list format
+  if (isMobile) {
+    const listItems = rows.map((row: any) => {
+      const tags = Array.isArray(row.tags) ? row.tags : [];
+      const tagsText = tags.map(tag => `[${tag}]`).join(' ');
+      const dateStr = prettyDate(row.created_at);
+
+      return `<span class="blog-title" data-article-id="${row.id}" style="color: #83a598; cursor: pointer; text-decoration: underline;">${row.title}</span>
+${row.description}
+${tagsText} • ${dateStr}
+`;
+    }).join('\n─────────────────────────────────────────────────\n');
+
+    return tagFilterSection + listItems;
+  }
+
   // Helper to truncate strings
   const truncate = (str: string, maxLen: number) => {
     if (str.length <= maxLen) return str;

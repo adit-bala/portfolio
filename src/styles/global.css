@@ -90,11 +90,12 @@ div#__next > div {
   white-space: nowrap;
 }
 
-/* Mobile responsive table - enable horizontal scroll */
+/* Mobile responsive - better text wrapping */
 @media (max-width: 768px) {
   .whitespace-pre-wrap {
-    overflow-x: auto;
-    display: block;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 }
 
