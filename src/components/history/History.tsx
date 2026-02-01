@@ -103,11 +103,15 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
           }
         }
       } else if (target.classList.contains('blog-tag-filter')) {
-        // Handle tag filter clicks
+        // Handle tag filter clicks - toggle tag and refresh view
         const tag = target.getAttribute('data-tag');
         if (tag) {
-          // Trigger a new blog command with the tag filter
-          const event = new CustomEvent('executeCommand', { detail: { command: `blog ${tag}` } });
+          // Toggle the tag selection
+          const { toggleBlogTag } = await import('../../utils/bin/commands');
+          toggleBlogTag(tag);
+
+          // Trigger refresh of blog view
+          const event = new CustomEvent('refreshBlogView');
           window.dispatchEvent(event);
         }
       }

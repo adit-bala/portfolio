@@ -66,6 +66,18 @@ export const twitter = async () => {
 };
 (twitter as any).description = 'See my tweets!';
 
+// Store selected tags globally for the blog command
+export let selectedBlogTags: Set<string> = new Set();
+
+// Helper to toggle a tag selection
+export const toggleBlogTag = (tag: string) => {
+  if (selectedBlogTags.has(tag)) {
+    selectedBlogTags.delete(tag);
+  } else {
+    selectedBlogTags.add(tag);
+  }
+};
+
 // Blog command
 export const blog = async (args: string[]) => {
   const prettyDate = (date: string) => {
@@ -75,9 +87,6 @@ export const blog = async (args: string[]) => {
       day: 'numeric',
     });
   };
-
-  // Get selected tag from args if provided
-  const selectedTag = args.length > 0 ? args.join(' ') : null;
 
   // Query for all articles
   const allRows = await runQuery(
@@ -96,9 +105,9 @@ export const blog = async (args: string[]) => {
     });
   });
 
-  // Build tag filter UI
+  // Build tag filter UI with multi-select support
   const tagBubbles = Array.from(allTags).sort().map((tag) => {
-    const isSelected = selectedTag === tag;
+    const isSelected = selectedBlogTags.has(tag);
     const style = isSelected
       ? 'background-color: #4a9eff; color: #000; padding: 2px 8px; border-radius: 4px; cursor: pointer;'
       : 'border: 1px solid currentColor; padding: 2px 8px; border-radius: 4px; cursor: pointer;';
@@ -107,16 +116,17 @@ export const blog = async (args: string[]) => {
 
   const tagFilterSection = `TAGS: ${tagBubbles}<br/><br/>`;
 
-  // Filter rows by selected tag if provided
-  const rows = selectedTag
+  // Filter rows by selected tags if any
+  const rows = selectedBlogTags.size > 0
     ? allRows.filter((row: any) => {
         const tags = Array.isArray(row.tags) ? row.tags : [];
-        return tags.includes(selectedTag);
-      }).slice(0, 10)
-    : allRows.slice(0, 10);
+        // Article must have at least one of the selected tags
+        return tags.some((tag: string) => selectedBlogTags.has(tag));
+      }).slice(0, 20)
+    : allRows.slice(0, 20);
 
   if (!rows.length) {
-    return tagFilterSection + `No articles found with tag "${selectedTag}".`;
+    return tagFilterSection + `No articles found with selected tags.`;
   }
 
   // Helper to truncate strings
@@ -157,27 +167,32 @@ export const blog = async (args: string[]) => {
 
   // Column widths
   const titleWidth = 25;
-  const descWidth = 60;
+  const descWidth = 50;
+  const tagsWidth = 20;
   const dateWidth = 18;
 
-  // Build header (removed TAGS column, will show inline)
+  // Build header
   const header =
     pad('TITLE', titleWidth) + ' │ ' +
     pad('DESCRIPTION', descWidth) + ' │ ' +
+    pad('TAGS', tagsWidth) + ' │ ' +
     'DATE';
 
   const separator =
     '─'.repeat(titleWidth) + '─┼─' +
     '─'.repeat(descWidth) + '─┼─' +
+    '─'.repeat(tagsWidth) + '─┼─' +
     '─'.repeat(dateWidth);
 
   // Build rows
   const tableRows = rows.map((row: any, index: number) => {
     const tags = Array.isArray(row.tags) ? row.tags : [];
+    const tagsStr = tags.join(', ');
     const dateStr = prettyDate(row.created_at);
 
-    // Wrap description to multiple lines
+    // Wrap description and tags to multiple lines
     const descLines = wrapText(row.description, descWidth);
+    const tagLines = wrapText(tagsStr, tagsWidth);
 
     // For title, truncate if needed but only wrap the actual text in the link
     const titleText = row.title;
@@ -188,30 +203,24 @@ export const blog = async (args: string[]) => {
     // Build multi-line row
     const lines: string[] = [];
 
-    // First line has title, description, date
+    // Determine max lines needed
+    const maxLines = Math.max(descLines.length, tagLines.length);
+
+    // First line has all columns
     lines.push(
       titleWithLink + ' │ ' +
       pad(descLines[0] || '', descWidth) + ' │ ' +
+      pad(tagLines[0] || '', tagsWidth) + ' │ ' +
       dateStr
     );
 
-    // Additional lines for wrapped description
-    for (let i = 1; i < descLines.length; i++) {
+    // Additional lines for wrapped content
+    for (let i = 1; i < maxLines; i++) {
       lines.push(
         ' '.repeat(titleWidth) + ' │ ' +
-        pad(descLines[i], descWidth) + ' │ ' +
+        pad(descLines[i] || '', descWidth) + ' │ ' +
+        pad(tagLines[i] || '', tagsWidth) + ' │ ' +
         ' '.repeat(dateWidth)
-      );
-    }
-
-    // Add tags line if there are tags
-    if (tags.length > 0) {
-      const tagBubbles = tags.map((tag: string) => {
-        return `<span style="border: 1px solid currentColor; padding: 1px 6px; border-radius: 3px; font-size: 0.9em;">${tag}</span>`;
-      }).join(' ');
-      lines.push(
-        ' '.repeat(titleWidth) + ' │ ' +
-        tagBubbles
       );
     }
 
@@ -220,6 +229,7 @@ export const blog = async (args: string[]) => {
       const rowSeparator =
         '─'.repeat(titleWidth) + '─┼─' +
         '─'.repeat(descWidth) + '─┼─' +
+        '─'.repeat(tagsWidth) + '─┼─' +
         '─'.repeat(dateWidth);
       lines.push(rowSeparator);
     }

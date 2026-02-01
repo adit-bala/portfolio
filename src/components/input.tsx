@@ -54,6 +54,21 @@ export const Input = ({
     };
   }, [setHistory, updateLastEntry, clearHistory, setCommand]);
 
+  // Listen for refreshBlogView events (when tag filters change)
+  React.useEffect(() => {
+    const handleRefreshBlogView = async () => {
+      // Re-run the blog command and update the last entry
+      const { blog } = await import('../utils/bin');
+      const output = await blog([]);
+      updateLastEntry({ output });
+    };
+
+    window.addEventListener('refreshBlogView', handleRefreshBlogView as EventListener);
+    return () => {
+      window.removeEventListener('refreshBlogView', handleRefreshBlogView as EventListener);
+    };
+  }, [updateLastEntry]);
+
   const onSubmit = async (event: React.KeyboardEvent<HTMLInputElement>) => {
     const commands: [string] = history
       .map(({ command }) => command)
