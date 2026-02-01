@@ -3,17 +3,18 @@
  * Uses the same model as knowledge-base: all-MiniLM-L6-v2 (384 dimensions)
  */
 
-import { pipeline, type FeatureExtractionPipeline } from '@huggingface/transformers';
+import { pipeline } from '@huggingface/transformers';
 
 // Singleton for the embedding pipeline
-let embeddingPipeline: FeatureExtractionPipeline | null = null;
-let loadingPromise: Promise<FeatureExtractionPipeline> | null = null;
+// Using 'any' to avoid complex union types that TypeScript can't represent
+let embeddingPipeline: any = null;
+let loadingPromise: Promise<any> | null = null;
 
 /**
  * Get or initialize the embedding pipeline.
  * Uses lazy loading and caches the pipeline for reuse.
  */
-export async function getEmbeddingPipeline(): Promise<FeatureExtractionPipeline> {
+export async function getEmbeddingPipeline(): Promise<any> {
   if (embeddingPipeline) {
     return embeddingPipeline;
   }
@@ -22,7 +23,7 @@ export async function getEmbeddingPipeline(): Promise<FeatureExtractionPipeline>
     return loadingPromise;
   }
 
-  loadingPromise = pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+  loadingPromise = pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2') as Promise<any>;
   embeddingPipeline = await loadingPromise;
   loadingPromise = null;
 
