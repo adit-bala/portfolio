@@ -100,11 +100,16 @@ export const Input = ({
         setProcessingAi(true);
       }
 
-      // Reset blog filters if running a new blog command
+      // Handle blog command state
       const trimmedCommand = command.trim().toLowerCase();
+      const { resetBlogFilters, setActiveBlogCommandId } = await import('../utils/bin/commands');
+
       if (trimmedCommand === 'blog' || trimmedCommand.startsWith('blog ')) {
-        const { resetBlogFilters } = await import('../utils/bin/commands');
+        // Reset filters when running a new blog command
         resetBlogFilters();
+      } else {
+        // Clear active blog command ID when running any other command
+        setActiveBlogCommandId(null);
       }
 
       await shell(

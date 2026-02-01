@@ -87,7 +87,7 @@ export const resetBlogFilters = () => {
 };
 
 // Set the active blog command ID
-export const setActiveBlogCommandId = (id: number) => {
+export const setActiveBlogCommandId = (id: number | null) => {
   activeBlogCommandId = id;
 };
 
