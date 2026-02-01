@@ -5,6 +5,7 @@ import * as bin from './index';
 // Help
 export const help = async (_args: string[]): Promise<string> => {
   const lines = Object.keys(bin)
+    .filter((cmd) => !cmd.startsWith('__')) // Filter out internal exports
     .sort()
     .map((cmd) => {
       const desc = (bin as any)[cmd]?.description || '';
