@@ -1,8 +1,6 @@
 // List of commands that do not require API calls
 import { runQuery } from '../sqlite';
 import * as bin from './index';
-import axios from 'axios';
-import { getFingerprint } from '../fingerprint';
 
 // Help
 export const help = async (_args: string[]): Promise<string> => {
@@ -123,55 +121,95 @@ export const banner = (_args?: string[]): string => {
 Type 'help' to see the list of available commands.
 Type 'clear' to clear the terminal.
 
-Prefix your query with '!' to ask my AI assistant about anything I've written about!
+Prefix your query with '!' to find the most relevant articles using AI!
 
-For example, try \`!What has Aditya written about running?\`
+For example, try \`!What does Aditya like to do?\`
 `;
 };
 (banner as any).description = 'Display the welcome banner';
 
 // AI Assistant command: !<query>
+// Uses hybrid search: Transformers.js embeddings + pgvector + full-text search
 export const ai = async (args: string[]): Promise<string> => {
   const question = args.join(' ').trim();
   if (!question) return 'Usage: !<your question>';
 
   try {
-    // Get fingerprint data
-    const { fingerprint, confidence } = await getFingerprint();
+    // Dynamically import embeddings to avoid SSR issues
+    const { generateEmbedding } = await import('../embeddings');
 
-    interface ApiRequestPayload {
-      question: string;
-      fingerprint: string;
-      confidence: string;
-    }
+    // Generate embedding for the query using Transformers.js
+    const queryEmbedding = await generateEmbedding(question);
 
-    const payload: ApiRequestPayload = {
-      question,
-      fingerprint,
-      confidence: confidence.toString(),
-    };
-
-    const response = await axios.post(
-      'https://knowledge-base.aditbala.com/ask',
-      payload,
-      { headers: { 'Content-Type': 'application/json' } },
+    // Hybrid search: combine vector similarity (60%) + full-text search (40%)
+    // Uses RRF (Reciprocal Rank Fusion) style scoring
+    const rows = await runQuery<{
+      id: string;
+      title: string;
+      description: string;
+      vector_score: number;
+      fts_rank: number;
+      hybrid_score: number;
+    }>(
+      `
+      WITH vector_search AS (
+        SELECT
+          a.id,
+          a.title,
+          a.description,
+          1 - (e.embedding <=> $1::vector) as vector_score,
+          ROW_NUMBER() OVER (ORDER BY e.embedding <=> $1::vector) as vector_rank
+        FROM embedding e
+        JOIN article a ON e.article_id = a.id
+        WHERE a.status = 'published'
+      ),
+      fts_search AS (
+        SELECT
+          a.id,
+          ts_rank(to_tsvector('english', e.content), plainto_tsquery('english', $2)) as fts_rank,
+          ROW_NUMBER() OVER (ORDER BY ts_rank(to_tsvector('english', e.content), plainto_tsquery('english', $2)) DESC) as text_rank
+        FROM embedding e
+        JOIN article a ON e.article_id = a.id
+        WHERE a.status = 'published'
+      )
+      SELECT
+        v.id,
+        v.title,
+        v.description,
+        v.vector_score,
+        COALESCE(f.fts_rank, 0) as fts_rank,
+        (0.6 * (1.0 / (60 + v.vector_rank)) + 0.4 * (1.0 / (60 + COALESCE(f.text_rank, 1000)))) as hybrid_score
+      FROM vector_search v
+      LEFT JOIN fts_search f ON v.id = f.id
+      ORDER BY hybrid_score DESC
+      LIMIT 5
+      `,
+      [JSON.stringify(queryEmbedding), question],
     );
-    // Try to extract a useful answer
-    if (response.data?.answer) {
-      return response.data.answer;
+
+    if (rows.length === 0) {
+      return `No articles found. Try a different query!`;
     }
-    return JSON.stringify(response.data, null, 2);
+
+    // Format output with article titles and descriptions
+    const output = rows
+      .map((row, i) => {
+        const title = `<span class="blog-title" data-article-id="${row.id}">${row.title}</span>`;
+        const scorePercent = (row.vector_score * 100).toFixed(0);
+        return `${i + 1}. ${title} (${scorePercent}% match)\n   ${row.description}`;
+      })
+      .join('\n\n');
+
+    return `Found ${rows.length} relevant article${rows.length > 1 ? 's' : ''}:\n\n${output}`;
   } catch (err: any) {
-    return `Error querying knowledge base: ${
-      err?.response?.data?.error || err.message
-    }`;
+    return `Error searching knowledge base: ${err?.message || 'Unknown error'}`;
   }
 };
 (
   ai as any
-).description = `Prefix your query with '!' to ask my AI assistant about anything I've written about!
+).description = `Prefix your query with '!' to search for relevant articles!
 
-ex. !What has Aditya written about running?`;
+ex. !What does Aditya like to do?`;
 
 // Theme switcher command
 export const theme = async (args: string[]): Promise<string> => {
