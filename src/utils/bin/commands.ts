@@ -81,7 +81,7 @@ export const blog = async () => {
   );
   if (!rows.length) return 'No blog articles found.';
 
-  // Helper to truncate and pad strings
+  // Helper to truncate strings
   const truncate = (str: string, maxLen: number) => {
     if (str.length <= maxLen) return str;
     return str.slice(0, maxLen - 3) + '...';
@@ -91,10 +91,36 @@ export const blog = async () => {
     return str + ' '.repeat(Math.max(0, len - str.length));
   };
 
+  // Helper to wrap text to multiple lines
+  const wrapText = (text: string, maxWidth: number): string[] => {
+    if (text.length <= maxWidth) return [text];
+
+    const lines: string[] = [];
+    let currentLine = '';
+    const words = text.split(' ');
+
+    for (const word of words) {
+      if (currentLine.length === 0) {
+        currentLine = word;
+      } else if (currentLine.length + 1 + word.length <= maxWidth) {
+        currentLine += ' ' + word;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+
+    if (currentLine.length > 0) {
+      lines.push(currentLine);
+    }
+
+    return lines;
+  };
+
   // Column widths
-  const titleWidth = 30;
-  const descWidth = 50;
-  const tagsWidth = 20;
+  const titleWidth = 25;
+  const descWidth = 60;
+  const tagsWidth = 15;
   const dateWidth = 18;
 
   // Build header
@@ -116,18 +142,37 @@ export const blog = async () => {
     const tagsStr = tags.length ? tags.join(', ') : '';
     const dateStr = prettyDate(row.created_at);
 
-    // For title, we need to preserve the clickable span but pad the visible text
+    // Wrap description to multiple lines
+    const descLines = wrapText(row.description, descWidth);
+
+    // For title, truncate if needed but only wrap the actual text in the link
     const titleText = row.title;
     const truncatedTitle = truncate(titleText, titleWidth);
-    const paddedTitle = pad(truncatedTitle, titleWidth);
-    const titleWithLink = `<span class="blog-title" data-article-id="${row.id}">${paddedTitle}</span>`;
+    const titlePadding = ' '.repeat(Math.max(0, titleWidth - truncatedTitle.length));
+    const titleWithLink = `<span class="blog-title" data-article-id="${row.id}">${truncatedTitle}</span>${titlePadding}`;
 
-    return (
+    // Build multi-line row
+    const lines: string[] = [];
+
+    // First line has all columns
+    lines.push(
       titleWithLink + ' │ ' +
-      pad(truncate(row.description, descWidth), descWidth) + ' │ ' +
+      pad(descLines[0] || '', descWidth) + ' │ ' +
       pad(truncate(tagsStr, tagsWidth), tagsWidth) + ' │ ' +
       dateStr
     );
+
+    // Additional lines for wrapped description
+    for (let i = 1; i < descLines.length; i++) {
+      lines.push(
+        ' '.repeat(titleWidth) + ' │ ' +
+        pad(descLines[i], descWidth) + ' │ ' +
+        ' '.repeat(tagsWidth) + ' │ ' +
+        ' '.repeat(dateWidth)
+      );
+    }
+
+    return lines.join('<br/>');
   }).join('<br/>');
 
   return (
