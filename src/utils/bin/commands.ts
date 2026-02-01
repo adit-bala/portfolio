@@ -105,18 +105,45 @@ export const blog = async () => {
 
 // Banner
 export const banner = (_args?: string[]): string => {
+  // Detect if mobile based on window width (if available)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  if (isMobile) {
+    // Mobile-friendly compact banner
+    return `
+   ___       _ _ _
+  / _ \\  __| (_) |_
+ / /_\\ \\/ _\` | | __|
+/  _  \\ (_| | | |_
+\\_/ \\_/\\__,_|_|\\__|
+
+        _      __   _
+ __      _____| |__
+ \\ \\ /\\ / / _ \\ '_ \\
+  \\ V  V /  __/ |_) |
+   \\_/\\_/ \\___|_.__/
+
+Type 'help' for commands
+Type 'clear' to clear
+
+Ask AI: !<your question>
+Example: !What does Aditya do?
+`;
+  }
+
+  // Desktop banner (original)
   return `
-               █████  ███   █████     ██                                     █████    
-              ░░███  ░░░   ░░███     ███                                    ░░███     
-  ██████    ███████  ████  ███████  ░░░   █████     █████ ███ █████  ██████  ░███████ 
+               █████  ███   █████     ██                                     █████
+              ░░███  ░░░   ░░███     ███                                    ░░███
+  ██████    ███████  ████  ███████  ░░░   █████     █████ ███ █████  ██████  ░███████
  ░░░░░███  ███░░███ ░░███ ░░░███░        ███░░     ░░███ ░███░░███  ███░░███ ░███░░███
   ███████ ░███ ░███  ░███   ░███        ░░█████     ░███ ░███ ░███ ░███████  ░███ ░███
  ███░░███ ░███ ░███  ░███   ░███ ███     ░░░░███    ░░███████████  ░███░░░   ░███ ░███
-░░████████░░████████ █████  ░░█████      ██████      ░░████░████   ░░██████  ████████ 
- ░░░░░░░░  ░░░░░░░░ ░░░░░    ░░░░░      ░░░░░░        ░░░░ ░░░░     ░░░░░░  ░░░░░░░░  
-                                                                                      
-                                                                                      
-                                                                                      
+░░████████░░████████ █████  ░░█████      ██████      ░░████░████   ░░██████  ████████
+ ░░░░░░░░  ░░░░░░░░ ░░░░░    ░░░░░      ░░░░░░        ░░░░ ░░░░     ░░░░░░  ░░░░░░░░
+
+
+
 
 Type 'help' to see the list of available commands.
 Type 'clear' to clear the terminal.
@@ -209,8 +236,7 @@ export const ai = async (args: string[]): Promise<string> => {
     const output = reranked
       .map((row, i) => {
         const title = `<span class="blog-title" data-article-id="${row.id}">${row.title}</span>`;
-        const scorePercent = (row.reranker_score * 100).toFixed(0);
-        return `${i + 1}. ${title} (${scorePercent}% match)\n   ${row.description}`;
+        return `${i + 1}. ${title}\n   ${row.description}`;
       })
       .join('\n\n');
 
