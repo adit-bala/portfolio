@@ -102,6 +102,14 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
             setModal({ open: true, content: rows[0].markdown });
           }
         }
+      } else if (target.classList.contains('blog-tag-filter')) {
+        // Handle tag filter clicks
+        const tag = target.getAttribute('data-tag');
+        if (tag) {
+          // Trigger a new blog command with the tag filter
+          const event = new CustomEvent('executeCommand', { detail: { command: `blog ${tag}` } });
+          window.dispatchEvent(event);
+        }
       }
     };
 

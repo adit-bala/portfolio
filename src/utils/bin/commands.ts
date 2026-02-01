@@ -67,7 +67,7 @@ export const twitter = async () => {
 (twitter as any).description = 'See my tweets!';
 
 // Blog command
-export const blog = async () => {
+export const blog = async (args: string[]) => {
   const prettyDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -76,10 +76,48 @@ export const blog = async () => {
     });
   };
 
-  const rows = await runQuery(
-    `SELECT id, title, description, tags, created_at FROM article WHERE status = 'published' AND NOT ('metadata' = ANY(tags)) ORDER BY created_at DESC LIMIT 10`,
+  // Get selected tag from args if provided
+  const selectedTag = args.length > 0 ? args.join(' ') : null;
+
+  // Query for all articles
+  const allRows = await runQuery(
+    `SELECT id, title, description, tags, created_at FROM article WHERE status = 'published' AND NOT ('metadata' = ANY(tags)) ORDER BY created_at DESC`,
   );
-  if (!rows.length) return 'No blog articles found.';
+  if (!allRows.length) return 'No blog articles found.';
+
+  // Get all unique tags
+  const allTags = new Set<string>();
+  allRows.forEach((row: any) => {
+    const tags = Array.isArray(row.tags) ? row.tags : [];
+    tags.forEach((tag: string) => {
+      if (tag !== 'metadata') {
+        allTags.add(tag);
+      }
+    });
+  });
+
+  // Build tag filter UI
+  const tagBubbles = Array.from(allTags).sort().map((tag) => {
+    const isSelected = selectedTag === tag;
+    const style = isSelected
+      ? 'background-color: #4a9eff; color: #000; padding: 2px 8px; border-radius: 4px; cursor: pointer;'
+      : 'border: 1px solid currentColor; padding: 2px 8px; border-radius: 4px; cursor: pointer;';
+    return `<span class="blog-tag-filter" data-tag="${tag}" style="${style}">${tag}</span>`;
+  }).join(' ');
+
+  const tagFilterSection = `TAGS: ${tagBubbles}<br/><br/>`;
+
+  // Filter rows by selected tag if provided
+  const rows = selectedTag
+    ? allRows.filter((row: any) => {
+        const tags = Array.isArray(row.tags) ? row.tags : [];
+        return tags.includes(selectedTag);
+      }).slice(0, 10)
+    : allRows.slice(0, 10);
+
+  if (!rows.length) {
+    return tagFilterSection + `No articles found with tag "${selectedTag}".`;
+  }
 
   // Helper to truncate strings
   const truncate = (str: string, maxLen: number) => {
@@ -120,26 +158,22 @@ export const blog = async () => {
   // Column widths
   const titleWidth = 25;
   const descWidth = 60;
-  const tagsWidth = 15;
   const dateWidth = 18;
 
-  // Build header
+  // Build header (removed TAGS column, will show inline)
   const header =
     pad('TITLE', titleWidth) + ' │ ' +
     pad('DESCRIPTION', descWidth) + ' │ ' +
-    pad('TAGS', tagsWidth) + ' │ ' +
     'DATE';
 
   const separator =
     '─'.repeat(titleWidth) + '─┼─' +
     '─'.repeat(descWidth) + '─┼─' +
-    '─'.repeat(tagsWidth) + '─┼─' +
     '─'.repeat(dateWidth);
 
   // Build rows
   const tableRows = rows.map((row: any, index: number) => {
     const tags = Array.isArray(row.tags) ? row.tags : [];
-    const tagsStr = tags.length ? tags.join(', ') : '';
     const dateStr = prettyDate(row.created_at);
 
     // Wrap description to multiple lines
@@ -154,11 +188,10 @@ export const blog = async () => {
     // Build multi-line row
     const lines: string[] = [];
 
-    // First line has all columns
+    // First line has title, description, date
     lines.push(
       titleWithLink + ' │ ' +
       pad(descLines[0] || '', descWidth) + ' │ ' +
-      pad(truncate(tagsStr, tagsWidth), tagsWidth) + ' │ ' +
       dateStr
     );
 
@@ -167,8 +200,18 @@ export const blog = async () => {
       lines.push(
         ' '.repeat(titleWidth) + ' │ ' +
         pad(descLines[i], descWidth) + ' │ ' +
-        ' '.repeat(tagsWidth) + ' │ ' +
         ' '.repeat(dateWidth)
+      );
+    }
+
+    // Add tags line if there are tags
+    if (tags.length > 0) {
+      const tagBubbles = tags.map((tag: string) => {
+        return `<span style="border: 1px solid currentColor; padding: 1px 6px; border-radius: 3px; font-size: 0.9em;">${tag}</span>`;
+      }).join(' ');
+      lines.push(
+        ' '.repeat(titleWidth) + ' │ ' +
+        tagBubbles
       );
     }
 
@@ -177,7 +220,6 @@ export const blog = async () => {
       const rowSeparator =
         '─'.repeat(titleWidth) + '─┼─' +
         '─'.repeat(descWidth) + '─┼─' +
-        '─'.repeat(tagsWidth) + '─┼─' +
         '─'.repeat(dateWidth);
       lines.push(rowSeparator);
     }
@@ -186,10 +228,11 @@ export const blog = async () => {
   }).join('<br/>');
 
   return (
+    tagFilterSection +
     header + '<br/>' +
     separator + '<br/>' +
     tableRows + '<br/><br/>' +
-    '<span class="blog-hint">Click a title to view the article.</span>'
+    '<span class="blog-hint">Click a title to view the article. Click a tag to filter.</span>'
   );
 };
 (blog as any).description = 'List all blog articles. Click a title to view.';

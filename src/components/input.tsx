@@ -33,6 +33,27 @@ export const Input = ({
     autoScrollToBottom();
   }, [history, autoScrollToBottom]);
 
+  // Listen for executeCommand events (e.g., from tag filter clicks)
+  React.useEffect(() => {
+    const handleExecuteCommand = async (e: CustomEvent) => {
+      const { command: cmdToExecute } = e.detail;
+      if (cmdToExecute) {
+        await shell(
+          cmdToExecute,
+          setHistory,
+          updateLastEntry,
+          clearHistory,
+          setCommand,
+        );
+      }
+    };
+
+    window.addEventListener('executeCommand', handleExecuteCommand as EventListener);
+    return () => {
+      window.removeEventListener('executeCommand', handleExecuteCommand as EventListener);
+    };
+  }, [setHistory, updateLastEntry, clearHistory, setCommand]);
+
   const onSubmit = async (event: React.KeyboardEvent<HTMLInputElement>) => {
     const commands: [string] = history
       .map(({ command }) => command)
