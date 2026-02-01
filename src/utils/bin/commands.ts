@@ -209,14 +209,12 @@ export const blog = async (args: string[]) => {
     const tags = Array.isArray(row.tags) ? row.tags : [];
     const dateStr = prettyDate(row.created_at);
 
-    // Format tags as bubbles (same style as filter tags but not clickable)
-    const tagBubbles = tags.map((tag: string) => {
-      const style = 'border: 1px solid currentColor; padding: 1px 6px; border-radius: 3px; font-size: 0.9em;';
-      return `<span style="${style}">${tag}</span>`;
-    }).join(' ');
+    // Format tags as text with brackets (will be styled later)
+    const tagsText = tags.map(tag => `[${tag}]`).join(' ');
 
-    // Wrap description to multiple lines
+    // Wrap description and tags to multiple lines
     const descLines = wrapText(row.description, descWidth);
+    const tagLines = wrapText(tagsText, tagsWidth);
 
     // For title, truncate if needed but only wrap the actual text in the link
     const titleText = row.title;
@@ -227,31 +225,23 @@ export const blog = async (args: string[]) => {
     // Build multi-line row
     const lines: string[] = [];
 
-    // First line has title, description, tags, and date
+    // Determine max lines needed
+    const maxLines = Math.max(descLines.length, tagLines.length);
+
+    // First line has all columns
     lines.push(
       titleWithLink + ' │ ' +
       pad(descLines[0] || '', descWidth) + ' │ ' +
-      pad('', tagsWidth) + ' │ ' +  // Empty space for tags column on first line
+      pad(tagLines[0] || '', tagsWidth) + ' │ ' +
       dateStr
     );
 
-    // Additional lines for wrapped description
-    for (let i = 1; i < descLines.length; i++) {
+    // Additional lines for wrapped content
+    for (let i = 1; i < maxLines; i++) {
       lines.push(
         ' '.repeat(titleWidth) + ' │ ' +
-        pad(descLines[i], descWidth) + ' │ ' +
-        pad('', tagsWidth) + ' │ ' +
-        ' '.repeat(dateWidth)
-      );
-    }
-
-    // Add tags on a separate line below the description
-    if (tags.length > 0) {
-      lines.push(
-        ' '.repeat(titleWidth) + ' │ ' +
-        pad('', descWidth) + ' │ ' +
-        tagBubbles +
-        ' │ ' +
+        pad(descLines[i] || '', descWidth) + ' │ ' +
+        pad(tagLines[i] || '', tagsWidth) + ' │ ' +
         ' '.repeat(dateWidth)
       );
     }

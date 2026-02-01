@@ -83,6 +83,21 @@ div#__next > div {
   color: #b8bb26;
 }
 
+/* Blog tag filter styling */
+.blog-tag-filter {
+  display: inline-block;
+  margin: 2px;
+  white-space: nowrap;
+}
+
+/* Mobile responsive table - enable horizontal scroll */
+@media (max-width: 768px) {
+  .whitespace-pre-wrap {
+    overflow-x: auto;
+    display: block;
+  }
+}
+
 /* Details and Summary styling for Notion dropdowns */
 details {
   margin: 1rem 0;
