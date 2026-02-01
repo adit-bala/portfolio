@@ -69,6 +69,9 @@ export const twitter = async () => {
 // Store selected tags globally for the blog command
 export let selectedBlogTags: Set<string> = new Set();
 
+// Track the ID of the current active blog command
+let activeBlogCommandId: number | null = null;
+
 // Helper to toggle a tag selection
 export const toggleBlogTag = (tag: string) => {
   if (selectedBlogTags.has(tag)) {
@@ -78,8 +81,25 @@ export const toggleBlogTag = (tag: string) => {
   }
 };
 
+// Reset tag filters (called when a new blog command is run)
+export const resetBlogFilters = () => {
+  selectedBlogTags.clear();
+};
+
+// Set the active blog command ID
+export const setActiveBlogCommandId = (id: number) => {
+  activeBlogCommandId = id;
+};
+
+// Get the active blog command ID
+export const getActiveBlogCommandId = () => activeBlogCommandId;
+
 // Blog command
 export const blog = async (args: string[]) => {
+  // Generate a unique ID for this blog command instance
+  const commandId = Date.now();
+  setActiveBlogCommandId(commandId);
+
   const prettyDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -111,7 +131,7 @@ export const blog = async (args: string[]) => {
     const style = isSelected
       ? 'background-color: #4a9eff; color: #000; padding: 2px 8px; border-radius: 4px; cursor: pointer;'
       : 'border: 1px solid currentColor; padding: 2px 8px; border-radius: 4px; cursor: pointer;';
-    return `<span class="blog-tag-filter" data-tag="${tag}" style="${style}">${tag}</span>`;
+    return `<span class="blog-tag-filter" data-tag="${tag}" data-command-id="${commandId}" style="${style}">${tag}</span>`;
   }).join(' ');
 
   const tagFilterSection = `TAGS: ${tagBubbles}<br/><br/>`;
@@ -187,12 +207,16 @@ export const blog = async (args: string[]) => {
   // Build rows
   const tableRows = rows.map((row: any, index: number) => {
     const tags = Array.isArray(row.tags) ? row.tags : [];
-    const tagsStr = tags.join(', ');
     const dateStr = prettyDate(row.created_at);
 
-    // Wrap description and tags to multiple lines
+    // Format tags as bubbles (same style as filter tags but not clickable)
+    const tagBubbles = tags.map((tag: string) => {
+      const style = 'border: 1px solid currentColor; padding: 1px 6px; border-radius: 3px; font-size: 0.9em;';
+      return `<span style="${style}">${tag}</span>`;
+    }).join(' ');
+
+    // Wrap description to multiple lines
     const descLines = wrapText(row.description, descWidth);
-    const tagLines = wrapText(tagsStr, tagsWidth);
 
     // For title, truncate if needed but only wrap the actual text in the link
     const titleText = row.title;
@@ -203,23 +227,31 @@ export const blog = async (args: string[]) => {
     // Build multi-line row
     const lines: string[] = [];
 
-    // Determine max lines needed
-    const maxLines = Math.max(descLines.length, tagLines.length);
-
-    // First line has all columns
+    // First line has title, description, tags, and date
     lines.push(
       titleWithLink + ' │ ' +
       pad(descLines[0] || '', descWidth) + ' │ ' +
-      pad(tagLines[0] || '', tagsWidth) + ' │ ' +
+      pad('', tagsWidth) + ' │ ' +  // Empty space for tags column on first line
       dateStr
     );
 
-    // Additional lines for wrapped content
-    for (let i = 1; i < maxLines; i++) {
+    // Additional lines for wrapped description
+    for (let i = 1; i < descLines.length; i++) {
       lines.push(
         ' '.repeat(titleWidth) + ' │ ' +
-        pad(descLines[i] || '', descWidth) + ' │ ' +
-        pad(tagLines[i] || '', tagsWidth) + ' │ ' +
+        pad(descLines[i], descWidth) + ' │ ' +
+        pad('', tagsWidth) + ' │ ' +
+        ' '.repeat(dateWidth)
+      );
+    }
+
+    // Add tags on a separate line below the description
+    if (tags.length > 0) {
+      lines.push(
+        ' '.repeat(titleWidth) + ' │ ' +
+        pad('', descWidth) + ' │ ' +
+        tagBubbles +
+        ' │ ' +
         ' '.repeat(dateWidth)
       );
     }

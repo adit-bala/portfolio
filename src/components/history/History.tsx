@@ -103,16 +103,23 @@ export const History: React.FC<{ history: Array<HistoryInterface> }> = ({
           }
         }
       } else if (target.classList.contains('blog-tag-filter')) {
-        // Handle tag filter clicks - toggle tag and refresh view
+        // Handle tag filter clicks - only for the active blog command
         const tag = target.getAttribute('data-tag');
-        if (tag) {
-          // Toggle the tag selection
-          const { toggleBlogTag } = await import('../../utils/bin/commands');
-          toggleBlogTag(tag);
+        const commandId = target.getAttribute('data-command-id');
 
-          // Trigger refresh of blog view
-          const event = new CustomEvent('refreshBlogView');
-          window.dispatchEvent(event);
+        if (tag && commandId) {
+          // Check if this is the active blog command
+          const { getActiveBlogCommandId, toggleBlogTag } = await import('../../utils/bin/commands');
+          const activeId = getActiveBlogCommandId();
+
+          if (activeId !== null && activeId.toString() === commandId) {
+            // Toggle the tag selection
+            toggleBlogTag(tag);
+
+            // Trigger refresh of blog view
+            const event = new CustomEvent('refreshBlogView');
+            window.dispatchEvent(event);
+          }
         }
       }
     };
